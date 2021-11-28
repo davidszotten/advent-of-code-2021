@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use clap::{App, Arg};
 use std::fmt::Display;
 use std::fs::File;
@@ -44,8 +44,7 @@ fn parse_input() -> Result<Args> {
         )
         .arg(
             Arg::with_name("input")
-                .help("Sets the input file to use, or `-` for stdin")
-                .required(true)
+                .help("Sets the input file to use, or `-` for stdin. Leave out to assume `input/<binary name>`")
                 .index(1),
         )
         .get_matches();
@@ -57,10 +56,18 @@ fn parse_input() -> Result<Args> {
     };
     let source = match matches
         .value_of("input")
-        .expect("input is required but missing")
     {
-        "-" => Source::Stdin,
-        filename => Source::File(filename.into()),
+        Some("-") => Source::Stdin,
+        Some(filename) => Source::File(filename.into()),
+        None => {
+            let filename: String = std::env::current_exe()?
+                .file_name()
+                .ok_or(anyhow!("invalid current exe filename"))?
+                .to_str()
+                .ok_or(anyhow!("current exe filename not a str?"))?
+                .into();
+            Source::File(format!("input/{}", filename))
+        }
     };
     Ok(Args { part, source })
 }

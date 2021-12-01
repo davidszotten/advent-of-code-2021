@@ -54,9 +54,7 @@ fn parse_input() -> Result<Args> {
         "2" => Part::Part2,
         _ => bail!("Invalid part"),
     };
-    let source = match matches
-        .value_of("input")
-    {
+    let source = match matches.value_of("input") {
         Some("-") => Source::Stdin,
         Some(filename) => Source::File(filename.into()),
         None => {

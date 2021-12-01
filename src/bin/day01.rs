@@ -1,20 +1,29 @@
 use anyhow::Result;
 use aoc2021::dispatch;
+use itertools::Itertools;
 
 fn main() -> Result<()> {
     dispatch(part1, part2)
 }
 
 fn part1(input: &str) -> Result<usize> {
-    let numbers: Vec<_> = input.split('\n').filter_map(|x| x.parse::<i32>().ok()).collect();
-    Ok(numbers.windows(2).filter(|win| win[0] < win[1]).count())
+    Ok(input
+        .split('\n')
+        .filter_map(|x| x.parse::<i32>().ok())
+        .tuple_windows()
+        .filter(|(a, b)| a < b)
+        .count())
 }
 
-
 fn part2(input: &str) -> Result<usize> {
-    let numbers: Vec<_> = input.split('\n').filter_map(|x| x.parse::<i32>().ok()).collect();
-    let windows: Vec<i32> = numbers.windows(3).map(|win| win.iter().sum()).collect();
-    Ok(windows.windows(2).filter(|win| win[0] < win[1]).count())
+    Ok(input
+        .split('\n')
+        .filter_map(|x| x.parse::<i32>().ok())
+        .tuple_windows()
+        .map(|(a, b, c)| a + b + c)
+        .tuple_windows()
+        .filter(|(a, b)| a < b)
+        .count())
 }
 
 #[cfg(test)]
@@ -39,11 +48,11 @@ mod tests {
         Ok(())
     }
 
-    // #[test]
-    // fn test_part1_empty() -> Result<()> {
-    //     assert!(part1("").is_err());
-    //     Ok(())
-    // }
+    #[test]
+    fn test_part1_empty() -> Result<()> {
+        assert_eq!(part1("")?, 0);
+        Ok(())
+    }
 
     #[test]
     fn test_part2() -> Result<()> {

@@ -52,8 +52,8 @@ impl TryFrom<&str> for Command {
 
 fn parse(input: &str) -> Result<Vec<Command>> {
     input
+        .trim()
         .split('\n')
-        .filter(|s| !s.is_empty())
         .map(|s| Command::try_from(s))
         .collect()
 }

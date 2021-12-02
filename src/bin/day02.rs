@@ -1,7 +1,5 @@
 use anyhow::{anyhow, bail, Error, Result};
 use aoc2021::dispatch;
-use lazy_static::lazy_static;
-use regex::Regex;
 
 #[derive(Debug, PartialEq)]
 enum Direction {
@@ -40,16 +38,14 @@ impl TryFrom<&str> for Direction {
 impl TryFrom<&str> for Command {
     type Error = Error;
     fn try_from(s: &str) -> Result<Self> {
-        lazy_static! {
-            static ref RE: Regex =
-                Regex::new(r"(?P<direction>\w+) (?P<distance>\d+)").expect("invalid regex");
-        }
-        let caps = RE
-            .captures(s)
-            .ok_or(anyhow!("regex mismatch for `{}`", s))?;
+        let (direction_raw, distance_raw) = s
+            .split_once(' ')
+            .ok_or(anyhow!("no space found: `{}`", s))?;
         Ok(Command::new(
-            Direction::try_from(&caps["direction"])?,
-            caps["distance"].parse()?,
+            Direction::try_from(direction_raw)?,
+            distance_raw
+                .parse()
+                .map_err(|e| anyhow!("{} (`{}`)", e, distance_raw))?,
         ))
     }
 }

@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Error, Result};
+use anyhow::{anyhow, bail, Error, Result};
 use aoc2021::dispatch;
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -32,7 +32,7 @@ impl TryFrom<&str> for Direction {
             "forward" => Ok(Direction::Forward),
             "up" => Ok(Direction::Up),
             "down" => Ok(Direction::Down),
-            _ => Err(anyhow!("invalid direction `{}`", s)),
+            _ => bail!("invalid direction `{}`", s),
         }
     }
 }

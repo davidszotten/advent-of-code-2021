@@ -1,6 +1,7 @@
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Context, Error, Result};
 use aoc2021::dispatch;
 use std::collections::HashMap;
+use std::str::FromStr;
 
 fn main() -> Result<()> {
     dispatch(part1, part2)
@@ -14,17 +15,9 @@ struct Board {
     column_counts: Vec<usize>,
 }
 
-impl Board {
-    fn new(size: usize, numbers: HashMap<i32, (usize, usize)>) -> Self {
-        Board {
-            size,
-            numbers,
-            row_counts: vec![0; size],
-            column_counts: vec![0; size],
-        }
-    }
-
-    fn from_raw(s: &str) -> Result<Self> {
+impl FromStr for Board {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self> {
         let mut numbers = HashMap::new();
         let mut size = 0;
         for (row_idx, raw_row) in s.split('\n').enumerate() {
@@ -35,6 +28,17 @@ impl Board {
             size = row_idx + 1;
         }
         Ok(Board::new(size, numbers))
+    }
+}
+
+impl Board {
+    fn new(size: usize, numbers: HashMap<i32, (usize, usize)>) -> Self {
+        Board {
+            size,
+            numbers,
+            row_counts: vec![0; size],
+            column_counts: vec![0; size],
+        }
     }
 
     fn mark(&mut self, n: i32) -> bool {
@@ -59,15 +63,9 @@ fn parse(input: &str) -> Result<(Vec<i32>, Vec<Board>)> {
     let raw_numbers = entries.next().ok_or(anyhow!("no numbers found"))?;
     let numbers: Vec<i32> = raw_numbers
         .split(',')
-        .map(|s| {
-            s.parse()
-                .map_err(|e| anyhow!("invalid number `{}` ({})", s, e))
-        })
-        .collect::<Result<Vec<i32>>>()?;
-    let mut boards = vec![];
-    while let Some(raw_board) = entries.next() {
-        boards.push(Board::from_raw(raw_board)?);
-    }
+        .map(|s| s.parse().context(format!("invalid number `{}`", s)))
+        .collect::<Result<_>>()?;
+    let boards = entries.map(|s| s.parse()).collect::<Result<_>>()?;
 
     Ok((numbers, boards))
 }

@@ -9,20 +9,17 @@ fn main() -> Result<()> {
 #[derive(Debug)]
 struct Board {
     rows: Vec<Vec<i32>>,
-    columns: Vec<Vec<i32>>,
     rows_seen: Vec<Vec<bool>>,
     columns_seen: Vec<Vec<bool>>,
 }
 
 impl Board {
-    fn new(rows: Vec<Vec<i32>>, columns: Vec<Vec<i32>>) -> Self {
-        let row_len = rows.len();
-        let column_len = columns.len();
+    fn new(rows: Vec<Vec<i32>>) -> Self {
+        let len = rows.len();
         Board {
             rows,
-            columns,
-            rows_seen: vec![vec![false; row_len]; column_len],
-            columns_seen: vec![vec![false; column_len]; row_len],
+            rows_seen: vec![vec![false; len]; len],
+            columns_seen: vec![vec![false; len]; len],
         }
     }
 
@@ -36,13 +33,7 @@ impl Board {
             }
             rows.push(row);
         }
-        let mut columns = vec![vec![]; rows.len()];
-        for row in &rows {
-            for (col_idx, number) in row.iter().enumerate() {
-                columns[col_idx].push(*number);
-            }
-        }
-        Ok(Board::new(rows, columns))
+        Ok(Board::new(rows))
     }
 
     fn mark(&mut self, n: i32) -> bool {
@@ -66,7 +57,7 @@ impl Board {
     fn unmarked_sum(&self) -> i32 {
         let mut sum = 0;
         for row_idx in 0..self.rows.len() {
-            for col_idx in 0..self.columns.len() {
+            for col_idx in 0..self.rows.len() {
                 if !self.rows_seen[row_idx][col_idx] {
                     sum += self.rows[row_idx][col_idx];
                 }

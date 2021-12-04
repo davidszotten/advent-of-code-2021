@@ -73,9 +73,9 @@ fn parse(input: &str) -> Result<(Vec<i32>, Vec<Board>)> {
 fn part1(input: &str) -> Result<i32> {
     let (numbers, mut boards) = parse(input)?;
     for number in numbers {
-        for board_idx in 0..boards.len() {
-            if boards[board_idx].mark(number) {
-                return Ok(boards[board_idx].unmarked_sum() * number);
+        for board in &mut boards {
+            if board.mark(number) {
+                return Ok(board.unmarked_sum() * number);
             }
         }
     }
@@ -90,7 +90,7 @@ fn part2(input: &str) -> Result<i32> {
         let mut board_idx = 0;
         while board_idx < end {
             if boards[board_idx].mark(number) {
-                let board = boards.remove(board_idx);
+                let board = boards.swap_remove(board_idx);
                 end -= 1;
                 winner = Some((board, number));
             } else {

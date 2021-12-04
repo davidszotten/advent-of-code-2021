@@ -1,5 +1,6 @@
 use anyhow::{anyhow, bail, Result};
 use aoc2021::dispatch;
+use std::collections::HashMap;
 
 fn main() -> Result<()> {
     dispatch(part1, part2)
@@ -7,67 +8,54 @@ fn main() -> Result<()> {
 
 #[derive(Debug)]
 struct Board {
-    rows: Vec<Vec<i32>>,
-    rows_seen: Vec<Vec<bool>>,
-    columns_seen: Vec<Vec<bool>>,
+    size: usize,
+    numbers: HashMap<i32, (usize, usize)>,
+    row_counts: Vec<usize>,
+    column_counts: Vec<usize>,
 }
 
 impl Board {
-    fn new(rows: Vec<Vec<i32>>) -> Self {
-        let len = rows.len();
+    fn new(size: usize, numbers: HashMap<i32, (usize, usize)>) -> Self {
         Board {
-            rows,
-            rows_seen: vec![vec![false; len]; len],
-            columns_seen: vec![vec![false; len]; len],
+            size,
+            numbers,
+            row_counts: vec![0; size],
+            column_counts: vec![0; size],
         }
     }
 
     fn from_raw(s: &str) -> Result<Self> {
-        let mut rows = vec![];
-        for raw_row in s.split('\n') {
-            let mut row = vec![];
-            for raw_number in raw_row.split_whitespace() {
+        let mut numbers = HashMap::new();
+        let mut size = 0;
+        for (row_idx, raw_row) in s.split('\n').enumerate() {
+            for (col_idx, raw_number) in raw_row.split_whitespace().enumerate() {
                 let n = raw_number.parse()?;
-                row.push(n);
+                numbers.insert(n, (row_idx, col_idx));
             }
-            rows.push(row);
+            size = row_idx + 1;
         }
-        Ok(Board::new(rows))
+        Ok(Board::new(size, numbers))
     }
 
     fn mark(&mut self, n: i32) -> bool {
-        for (row_idx, row) in self.rows.iter().enumerate() {
-            for (col_idx, number) in row.iter().enumerate() {
-                if *number == n {
-                    self.rows_seen[row_idx][col_idx] = true;
-                    self.columns_seen[col_idx][row_idx] = true;
+        if let Some((row_idx, col_idx)) = self.numbers.remove(&n) {
+            self.row_counts[row_idx] += 1;
+            self.column_counts[col_idx] += 1;
 
-                    if self.rows_seen[row_idx].iter().all(|&x| x)
-                        || self.columns_seen[col_idx].iter().all(|&x| x)
-                    {
-                        return true;
-                    }
-                }
+            if self.row_counts[row_idx] == self.size || self.column_counts[col_idx] == self.size {
+                return true;
             }
         }
         false
     }
 
     fn unmarked_sum(&self) -> i32 {
-        let mut sum = 0;
-        for row_idx in 0..self.rows.len() {
-            for col_idx in 0..self.rows.len() {
-                if !self.rows_seen[row_idx][col_idx] {
-                    sum += self.rows[row_idx][col_idx];
-                }
-            }
-        }
-        sum
+        self.numbers.keys().sum()
     }
 }
 
 fn parse(input: &str) -> Result<(Vec<i32>, Vec<Board>)> {
-    let mut entries = input.split("\n\n");
+    let mut entries = input.trim().split("\n\n");
     let raw_numbers = entries.next().ok_or(anyhow!("no numbers found"))?;
     let numbers: Vec<i32> = raw_numbers
         .split(',')

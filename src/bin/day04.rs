@@ -1,6 +1,5 @@
 use anyhow::{anyhow, bail, Result};
 use aoc2021::dispatch;
-use std::collections::HashSet;
 
 fn main() -> Result<()> {
     dispatch(part1, part2)
@@ -87,17 +86,12 @@ fn parse(input: &str) -> Result<(Vec<i32>, Vec<Board>)> {
 
 fn part1(input: &str) -> Result<i32> {
     let (numbers, mut boards) = parse(input)?;
-    let mut winner = None;
-    'outer: for number in numbers {
+    for number in numbers {
         for board_idx in 0..boards.len() {
             if boards[board_idx].mark(number) {
-                winner = Some((board_idx, number));
-                break 'outer;
+                return Ok(boards[board_idx].unmarked_sum() * number);
             }
         }
-    }
-    if let Some((winner_idx, number)) = winner {
-        return Ok(boards[winner_idx].unmarked_sum() * number);
     }
     bail!("no winner")
 }
@@ -105,23 +99,21 @@ fn part1(input: &str) -> Result<i32> {
 fn part2(input: &str) -> Result<i32> {
     let (numbers, mut boards) = parse(input)?;
     let mut winner = None;
-    let mut won = HashSet::new();
-    'outer: for number in numbers {
-        for board_idx in 0..boards.len() {
-            if won.contains(&board_idx) {
-                continue;
-            }
+    for number in numbers {
+        let mut end = boards.len();
+        let mut board_idx = 0;
+        while board_idx < end {
             if boards[board_idx].mark(number) {
-                winner = Some((board_idx, number));
-                won.insert(board_idx);
-            }
-            if won.len() == boards.len() {
-                break 'outer;
+                let board = boards.remove(board_idx);
+                end -= 1;
+                winner = Some((board, number));
+            } else {
+                board_idx += 1;
             }
         }
     }
-    if let Some((winner_idx, number)) = winner {
-        return Ok(boards[winner_idx].unmarked_sum() * number);
+    if let Some((board, number)) = winner {
+        return Ok(board.unmarked_sum() * number);
     }
     bail!("no winner")
 }

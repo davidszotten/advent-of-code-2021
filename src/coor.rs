@@ -1,5 +1,7 @@
+use anyhow::{Context, Error, Result};
 use std::fmt;
 use std::ops::{Add, AddAssign, Mul};
+use std::str::FromStr;
 
 #[derive(PartialEq, Eq, Default, Clone, Copy, Hash)]
 pub struct Coor {
@@ -15,6 +17,14 @@ impl Coor {
 impl fmt::Debug for Coor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "({}, {})", self.x, self.y)
+    }
+}
+
+impl FromStr for Coor {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self> {
+        let (x, y) = s.split_once(',').context("No comma")?;
+        Ok(Coor::new(x.parse()?, y.parse()?))
     }
 }
 

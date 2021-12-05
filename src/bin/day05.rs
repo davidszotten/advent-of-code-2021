@@ -43,7 +43,7 @@ impl Line {
 impl FromStr for Line {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self> {
-        let (start, end) = s.split_once(" -> ").context("no arrow")?;
+        let (start, end) = s.split_once(" -> ").context(format!("no arrow: `{}`", s))?;
         Ok(Line::new(start.parse()?, end.parse()?))
     }
 }

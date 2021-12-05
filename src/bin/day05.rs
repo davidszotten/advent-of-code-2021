@@ -19,19 +19,24 @@ impl Line {
         Self { start, end }
     }
 
+    fn diff(&self) -> Coor {
+        self.end - self.start
+    }
+
     fn walk(&self, points: &mut HashMap<Coor, usize>) {
-        let line_diff = self.end - self.start;
-        let diff = Coor::new(line_diff.x.signum(), line_diff.y.signum());
+        let diff = self.diff();
+        let direction = Coor::new(diff.x.signum(), diff.y.signum());
         let mut point = self.start;
         while point != self.end {
             *points.entry(point).or_insert(0) += 1;
-            point += diff;
+            point += direction;
         }
         *points.entry(point).or_insert(0) += 1;
     }
 
     fn hor_or_vert(&self) -> bool {
-        return self.start.x == self.end.x || self.start.y == self.end.y;
+        let diff = self.diff();
+        diff.x == 0 || diff.y == 0
     }
 }
 
@@ -51,25 +56,25 @@ fn parse(input: &str) -> Result<Vec<Line>> {
         .collect::<Result<_>>()
 }
 
+fn count_overlaps(points: &HashMap<Coor, usize>) -> usize {
+    points.values().filter(|&v| *v > 1).count()
+}
+
 fn part1(input: &str) -> Result<usize> {
     let mut points = HashMap::new();
     let lines = parse(input)?;
-    for line in lines {
-        if !line.hor_or_vert() {
-            continue;
-        }
-        line.walk(&mut points);
-    }
-    Ok(points.values().filter(|&v| *v > 1).count())
+    lines
+        .into_iter()
+        .filter(Line::hor_or_vert)
+        .for_each(|l| l.walk(&mut points));
+    Ok(count_overlaps(&points))
 }
 
 fn part2(input: &str) -> Result<usize> {
     let mut points = HashMap::new();
     let lines = parse(input)?;
-    for line in lines {
-        line.walk(&mut points);
-    }
-    Ok(points.values().filter(|&v| *v > 1).count())
+    lines.iter().for_each(|line| line.walk(&mut points));
+    Ok(count_overlaps(&points))
 }
 
 #[cfg(test)]

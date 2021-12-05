@@ -17,9 +17,11 @@ fn part2(_input: &str) -> Result<i32> {
 mod tests {
     use super::*;
 
+    const TEST_INPUT: &str = "";
+
     #[test]
     fn test_part1() -> Result<()> {
-        assert_eq!(part1("")?, 0);
+        assert_eq!(part1(TEST_INPUT)?, 0);
         Ok(())
     }
 }

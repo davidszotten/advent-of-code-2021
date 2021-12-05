@@ -18,6 +18,21 @@ impl Line {
     fn new(start: Coor, end: Coor) -> Self {
         Self { start, end }
     }
+
+    fn walk(&self, points: &mut HashMap<Coor, usize>) {
+        let line_diff = self.end - self.start;
+        let diff = Coor::new(line_diff.x.signum(), line_diff.y.signum());
+        let mut point = self.start;
+        while point != self.end {
+            *points.entry(point).or_insert(0) += 1;
+            point += diff;
+        }
+        *points.entry(point).or_insert(0) += 1;
+    }
+
+    fn hor_or_vert(&self) -> bool {
+        return self.start.x == self.end.x || self.start.y == self.end.y;
+    }
 }
 
 impl FromStr for Line {
@@ -35,24 +50,15 @@ fn parse(input: &str) -> Result<Vec<Line>> {
         .map(|s| s.parse())
         .collect::<Result<_>>()
 }
+
 fn part1(input: &str) -> Result<usize> {
     let mut points = HashMap::new();
     let lines = parse(input)?;
     for line in lines {
-        if line.start.x != line.end.x && line.start.y != line.end.y {
+        if !line.hor_or_vert() {
             continue;
         }
-        let diff = if line.start.x == line.end.x {
-            Coor::new(0, if line.start.y > line.end.y { -1 } else { 1 })
-        } else {
-            Coor::new(if line.start.x > line.end.x { -1 } else { 1 }, 0)
-        };
-        let mut point = line.start;
-        while point != line.end {
-            *points.entry(point).or_insert(0) += 1;
-            point += diff;
-        }
-        *points.entry(point).or_insert(0) += 1;
+        line.walk(&mut points);
     }
     Ok(points.values().filter(|&v| *v > 1).count())
 }
@@ -61,24 +67,7 @@ fn part2(input: &str) -> Result<usize> {
     let mut points = HashMap::new();
     let lines = parse(input)?;
     for line in lines {
-        let diff = if line.start.x == line.end.x || line.start.y == line.end.y {
-            if line.start.x == line.end.x {
-                Coor::new(0, if line.start.y > line.end.y { -1 } else { 1 })
-            } else {
-                Coor::new(if line.start.x > line.end.x { -1 } else { 1 }, 0)
-            }
-        } else {
-            Coor::new(
-                if line.start.x > line.end.x { -1 } else { 1 },
-                if line.start.y > line.end.y { -1 } else { 1 },
-            )
-        };
-        let mut point = line.start;
-        while point != line.end {
-            *points.entry(point).or_insert(0) += 1;
-            point += diff;
-        }
-        *points.entry(point).or_insert(0) += 1;
+        line.walk(&mut points);
     }
     Ok(points.values().filter(|&v| *v > 1).count())
 }

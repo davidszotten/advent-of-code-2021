@@ -1,6 +1,6 @@
 use anyhow::{Context, Error, Result};
 use std::fmt;
-use std::ops::{Add, AddAssign, Mul};
+use std::ops::{Add, AddAssign, Mul, Sub};
 use std::str::FromStr;
 
 #[derive(PartialEq, Eq, Default, Clone, Copy, Hash)]
@@ -42,6 +42,14 @@ impl AddAssign for Coor {
     fn add_assign(&mut self, other: Self) {
         // Coor::new(self.x + other.x, self.y + other.y)
         *self = *self + other;
+    }
+}
+
+impl Sub for Coor {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        self + other * -1
     }
 }
 

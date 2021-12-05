@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Result};
+use anyhow::{bail, Context, Result};
 use clap::{App, Arg};
 use std::fmt::Display;
 use std::fs::File;
@@ -60,9 +60,9 @@ fn parse_input() -> Result<Args> {
         None => {
             let filename: String = std::env::current_exe()?
                 .file_name()
-                .ok_or(anyhow!("invalid current exe filename"))?
+                .context("invalid current exe filename")?
                 .to_str()
-                .ok_or(anyhow!("current exe filename not a str?"))?
+                .context("current exe filename not a str?")?
                 .into();
             Source::File(format!("input/{}", filename))
         }

@@ -116,12 +116,12 @@ impl Cpu {
         }
     }
 
-    pub fn from_str(program_str: &str) -> Self {
+    pub fn from_str(program_str: &str) -> Result<Self> {
         let program: Vec<_> = program_str
             .split(',')
-            .filter_map(|x| x.parse::<i64>().ok())
-            .collect();
-        Self::new(program)
+            .map(|x| x.parse::<i64>().context(format!("invalid op code `{}`", x)))
+            .collect::<Result<_>>()?;
+        Ok(Self::new(program))
     }
 
     pub fn enqueue_input(&mut self, value: i64) {
@@ -160,7 +160,6 @@ impl Cpu {
     pub fn run(&mut self) -> Result<CpuState> {
         let state = loop {
             let op = Op::try_from(self.program[self.pc])?;
-            // dbg!(self.pc, &op, &self.program);
             use Op::*;
             match op {
                 Add(mode1, mode2, mode3) => {
@@ -278,7 +277,7 @@ mod tests {
 
     #[test]
     fn test_203() -> Result<()> {
-        let mut cpu = Cpu::from_str("203,10,99");
+        let mut cpu = Cpu::from_str("203,10,99")?;
         cpu.relative_base = 2;
         cpu.enqueue_input(1);
         assert_eq!(cpu.run()?, CpuState::Halted);

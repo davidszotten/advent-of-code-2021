@@ -7,7 +7,7 @@ fn main() -> Result<()> {
 }
 
 fn part1(input: &str) -> Result<String> {
-    let mut cpu = Cpu::from_str(input);
+    let mut cpu = Cpu::from_str(input.trim())?;
     let mut output = vec![];
 
     loop {

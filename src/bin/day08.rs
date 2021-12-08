@@ -130,47 +130,44 @@ b    .  b    .  .    c  b    c  b    c
 
 */
 
-fn decode(input: &Input) -> Result<usize> {
-    let patterns = input.patterns.clone();
+fn one<'a, I: IntoIterator<Item = &'a Digit>>(values: I) -> Result<Digit> {
+    let mut it = values.into_iter();
+    let item = it.next().context("was empty")?;
+    if let Some(_) = it.next() {
+        bail!("more than one");
+    }
+    Ok(item.copy())
+}
 
-    let mut by_size = HashMap::new();
-    for pattern in patterns {
+fn decode(input: &Input) -> Result<usize> {
+    let mut by_size: HashMap<usize, Vec<Digit>> = HashMap::new();
+    for pattern in input.patterns.iter().cloned() {
         by_size
             .entry(pattern.segments.len())
             .or_insert(vec![])
             .push(pattern);
     }
 
-    fn get_single_by_size(by_size: &mut HashMap<usize, Vec<Digit>>, size: usize) -> Result<Digit> {
-        let mut digits = by_size.remove(&size).context("missing digit")?;
-        assert_eq!(digits.len(), 1);
-        Ok(digits.remove(0))
-    }
+    let d1 = one(&by_size[&2])?;
+    let d4 = one(&by_size[&4])?;
+    let d7 = one(&by_size[&3])?;
+    let d8 = one(&by_size[&7])?;
 
-    fn one(it: &mut dyn Iterator<Item = &Digit>) -> Result<Digit> {
-        let item = it.next().context("was empty")?;
-        if let Some(_) = it.next() {
-            bail!("more than one");
-        }
-        Ok(item.copy())
-    }
+    let six_segments = &by_size[&6];
+    assert_eq!(six_segments.len(), 3);
+    let d6 = one(six_segments.iter().filter(|s| s.share(&d1, 1)))?;
+    let d9 = one(six_segments.iter().filter(|s| s.share(&d4, 4)))?;
+    let d0 = one(six_segments.iter().filter(|&s| s != &d6 && s != &d9))?;
 
-    let d1: Digit = get_single_by_size(&mut by_size, 2)?;
-    let d4: Digit = get_single_by_size(&mut by_size, 4)?;
-    let d7: Digit = get_single_by_size(&mut by_size, 3)?;
-    let d8: Digit = get_single_by_size(&mut by_size, 7)?;
-
-    let sixes = by_size.remove(&6).context("missing digit")?;
-    assert_eq!(sixes.len(), 3);
-    let d6: Digit = one(&mut sixes.iter().filter(|s| s.share(&d1, 1)))?;
-    let d9: Digit = one(&mut sixes.iter().filter(|s| s.share(&d4, 4)))?;
-    let d0: Digit = one(&mut sixes.iter().filter(|&s| s != &d6 && s != &d9))?;
-
-    let fives = by_size.remove(&5).context("missing digit")?;
-    assert_eq!(fives.len(), 3);
-    let d3: Digit = one(&mut fives.iter().filter(|s| s.share(&d1, 2)))?;
-    let d5: Digit = one(&mut fives.iter().filter(|&s| s != &d3 && s.share(&d6, 5)))?;
-    let d2: Digit = one(&mut fives.iter().filter(|&s| s != &d3 && s.share(&d6, 4)))?;
+    let five_segments = &by_size[&5];
+    assert_eq!(five_segments.len(), 3);
+    let d3 = one(five_segments.iter().filter(|s| s.share(&d1, 2)))?;
+    let d5 = one(five_segments
+        .iter()
+        .filter(|&s| s != &d3 && s.share(&d6, 5)))?;
+    let d2 = one(five_segments
+        .iter()
+        .filter(|&s| s != &d3 && s.share(&d6, 4)))?;
 
     let map = HashMap::from([
         (d0, 0),

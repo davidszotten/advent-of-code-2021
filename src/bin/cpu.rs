@@ -7,14 +7,12 @@ fn main() -> Result<()> {
 }
 
 fn part1(input: &str) -> Result<String> {
-    let mut cpu = Cpu::from_str(input.trim())?;
+    let mut cpu: Cpu = input.trim().parse()?;
     let mut output = vec![];
 
     loop {
         match cpu.run()? {
-            CpuState::Output(value) => match value {
-                c => output.push(c as u8 as char),
-            },
+            CpuState::Output(value) => output.push(value as u8 as char),
             CpuState::Halted => break,
             s => {
                 println!("State: {:?}", s);

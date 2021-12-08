@@ -8,7 +8,7 @@ fn main() -> Result<()> {
     dispatch(part1, part2)
 }
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(Eq, Clone)]
 struct Digit {
     segments: HashSet<char>,
 }
@@ -45,6 +45,12 @@ impl Digit {
         Self {
             segments: self.segments.iter().cloned().collect(),
         }
+    }
+}
+
+impl PartialEq for Digit {
+    fn eq(&self, other: &Self) -> bool {
+        self.segments == other.segments
     }
 }
 

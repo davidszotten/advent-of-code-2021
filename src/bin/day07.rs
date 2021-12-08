@@ -15,7 +15,7 @@ fn parse(input: &str) -> Result<Vec<i32>> {
 
 fn part1(input: &str) -> Result<i32> {
     let mut numbers = parse(input)?;
-    numbers.sort();
+    numbers.sort_unstable();
     let pos = numbers[numbers.len() / 2];
     Ok(numbers.into_iter().map(|n| (n - pos).abs()).sum())
 }

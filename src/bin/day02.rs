@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Error, Result};
+use anyhow::{bail, Context, Error, Result};
 use aoc2021::dispatch;
 
 #[derive(Debug, PartialEq)]
@@ -40,22 +40,16 @@ impl TryFrom<&str> for Command {
     fn try_from(s: &str) -> Result<Self> {
         let (direction_raw, distance_raw) = s
             .split_once(' ')
-            .ok_or(anyhow!("no space found: `{}`", s))?;
+            .context(format!("no space found: `{}`", s))?;
         Ok(Command::new(
             Direction::try_from(direction_raw)?,
-            distance_raw
-                .parse()
-                .map_err(|e| anyhow!("{} (`{}`)", e, distance_raw))?,
+            distance_raw.parse().context("invalid distance")?,
         ))
     }
 }
 
 fn parse(input: &str) -> Result<Vec<Command>> {
-    input
-        .trim()
-        .split('\n')
-        .map(|s| Command::try_from(s))
-        .collect()
+    input.trim().split('\n').map(Command::try_from).collect()
 }
 
 fn main() -> Result<()> {

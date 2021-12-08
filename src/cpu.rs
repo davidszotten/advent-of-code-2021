@@ -1,6 +1,7 @@
 use anyhow::{bail, Context, Error, Result};
 use std::collections::{HashMap, VecDeque};
 use std::convert::TryFrom;
+use std::str::FromStr;
 
 #[derive(Debug, PartialEq, Eq)]
 enum Mode {
@@ -105,6 +106,17 @@ pub struct Cpu {
     memory: HashMap<i64, i64>,
 }
 
+impl FromStr for Cpu {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self> {
+        let program: Vec<_> = s
+            .split(',')
+            .map(|x| x.parse::<i64>().context(format!("invalid op code `{}`", x)))
+            .collect::<Result<_>>()?;
+        Ok(Self::new(program))
+    }
+}
+
 impl Cpu {
     fn new(program: Vec<i64>) -> Self {
         Cpu {
@@ -114,14 +126,6 @@ impl Cpu {
             relative_base: 0,
             memory: HashMap::new(),
         }
-    }
-
-    pub fn from_str(program_str: &str) -> Result<Self> {
-        let program: Vec<_> = program_str
-            .split(',')
-            .map(|x| x.parse::<i64>().context(format!("invalid op code `{}`", x)))
-            .collect::<Result<_>>()?;
-        Ok(Self::new(program))
     }
 
     pub fn enqueue_input(&mut self, value: i64) {
@@ -140,7 +144,7 @@ impl Cpu {
         *self
             .program
             .get(source as usize)
-            .unwrap_or(self.memory.get(&source).unwrap_or(&0))
+            .unwrap_or_else(|| self.memory.get(&source).unwrap_or(&0))
     }
 
     fn set(&mut self, mode: Mode, destination: i64, value: i64) {

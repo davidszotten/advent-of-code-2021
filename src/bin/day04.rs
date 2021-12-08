@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Context, Error, Result};
+use anyhow::{bail, Context, Error, Result};
 use aoc2021::dispatch;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -60,7 +60,7 @@ impl Board {
 
 fn parse(input: &str) -> Result<(Vec<i32>, Vec<Board>)> {
     let mut entries = input.trim().split("\n\n");
-    let raw_numbers = entries.next().ok_or(anyhow!("no numbers found"))?;
+    let raw_numbers = entries.next().context("no numbers found")?;
     let numbers: Vec<i32> = raw_numbers
         .split(',')
         .map(|s| s.parse().context(format!("invalid number `{}`", s)))

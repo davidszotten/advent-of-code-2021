@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Error, Result};
+use anyhow::{bail, Context, Error, Result};
 use aoc2021::dispatch;
 
 fn main() -> Result<()> {
@@ -23,7 +23,7 @@ impl TryFrom<char> for Bit {
 }
 
 fn from_str(s: &str) -> Result<Vec<Bit>> {
-    s.chars().map(|c| Bit::try_from(c)).collect()
+    s.chars().map(Bit::try_from).collect()
 }
 
 fn to_decimal(number: &[Bit]) -> i32 {
@@ -47,7 +47,7 @@ fn parse(input: &str) -> Result<Vec<Vec<Bit>>> {
 
 fn part1(input: &str) -> Result<i32> {
     let numbers = parse(input)?;
-    let length = numbers.get(0).ok_or(anyhow!("no numbers found"))?.len();
+    let length = numbers.get(0).context("no numbers found")?.len();
     let mut counts = vec![0; length];
     for number in numbers {
         for (idx, bit) in number.iter().enumerate() {
@@ -87,7 +87,7 @@ fn reduce_with_rule(numbers: &[Vec<Bit>], rule: fn(i32) -> Bit) -> Result<i32> {
             break;
         } else if numbers.len() == previous_len {
             bail!("nothing was filtered out");
-        } else if numbers.len() == 0 {
+        } else if numbers.is_empty() {
             bail!("no numbers left");
         }
 

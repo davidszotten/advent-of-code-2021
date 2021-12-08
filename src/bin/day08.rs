@@ -28,7 +28,7 @@ impl Digit {
             segments: self
                 .segments
                 .intersection(&other.segments)
-                .map(|&c| c)
+                .copied()
                 .collect(),
         }
     }
@@ -121,7 +121,7 @@ impl Input {
         for pattern in self.patterns.into_iter() {
             by_size
                 .entry(pattern.segments.len())
-                .or_insert(vec![])
+                .or_insert_with(Vec::new)
                 .push(pattern);
         }
 
@@ -182,7 +182,7 @@ fn part1(input: &str) -> Result<usize> {
 fn one<'a, I: IntoIterator<Item = &'a Digit>>(values: I) -> Result<Digit> {
     let mut it = values.into_iter();
     let item = it.next().context("was empty")?;
-    if let Some(_) = it.next() {
+    if it.next().is_some() {
         bail!("more than one");
     }
     Ok(item.copy())

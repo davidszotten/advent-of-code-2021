@@ -23,8 +23,7 @@ fn part1(input: &str) -> Result<i32> {
     let adjacent = parse(input)?;
 
     let mut found = 0;
-    let mut queue = vec![];
-    queue.push((HashSet::from(["start"]), "start"));
+    let mut queue = vec![(HashSet::from(["start"]), "start")];
     while let Some((seen, pos)) = queue.pop() {
         for &next in &adjacent[pos] {
             if next == "end" {
@@ -46,8 +45,7 @@ fn part2(input: &str) -> Result<i32> {
     let adjacent = parse(input)?;
 
     let mut found = 0;
-    let mut queue = vec![];
-    queue.push((HashSet::new(), false, "start"));
+    let mut queue = vec![(HashSet::new(), false, "start")];
     while let Some((seen, twice, pos)) = queue.pop() {
         for &next in &adjacent[pos] {
             if next == "start" {

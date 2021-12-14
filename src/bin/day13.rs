@@ -9,42 +9,68 @@ fn main() -> Result<()> {
     dispatch(part1, part2)
 }
 
-fn parse_fold(s: &str) -> Result<(char, i64)> {
-    // fold along x=5";
-    let (_, equation) = s.rsplit_once(' ').context("no equation")?;
-    let (dir_s, raw_value) = equation.split_once('=').context("no equal sign")?;
-    let dir = dir_s.chars().next().context("no chars?")?;
-    Ok((dir, raw_value.parse()?))
+enum Axis {
+    X,
+    Y,
+}
+
+impl FromStr for Axis {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self> {
+        Ok(match s {
+            "x" => Axis::X,
+            "y" => Axis::Y,
+            _ => bail!("invalid axis `{}`", s),
+        })
+    }
+}
+
+struct Fold {
+    axis: Axis,
+    line: i64,
+}
+
+impl Fold {
+    fn apply(&self, val: i64) -> i64 {
+        if val < self.line {
+            val
+        } else {
+            2 * self.line - val
+        }
+    }
+}
+
+impl FromStr for Fold {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self> {
+        // fold along x=5";
+        let (_, equation) = s.rsplit_once(' ').context("no equation")?;
+        let (axis_s, raw_line) = equation.split_once('=').context("no equal sign")?;
+        let line = raw_line.parse()?;
+        let axis = axis_s.parse()?;
+        Ok(Fold { axis, line })
+    }
 }
 
 struct Instructions {
     dots: HashSet<Coor>,
-    folds: Vec<(char, i64)>,
-}
-
-fn fold_val(val: i64, line: i64) -> i64 {
-    if val < line {
-        val
-    } else {
-        2 * line - val
-    }
+    folds: Vec<Fold>,
 }
 
 impl Instructions {
     fn fold(&mut self) {
         let fold = self.folds.remove(0);
-        self.dots = match fold.0 {
-            'y' => self
+        self.dots = match fold.axis {
+            Axis::X => self
                 .dots
                 .iter()
-                .map(|d| Coor::new(d.x, fold_val(d.y, fold.1)))
+                .map(|d| Coor::new(fold.apply(d.x), d.y))
                 .collect(),
-            'x' => self
+            Axis::Y => self
                 .dots
                 .iter()
-                .map(|d| Coor::new(fold_val(d.x, fold.1), d.y))
+                .map(|d| Coor::new(d.x, fold.apply(d.y)))
                 .collect(),
-            _ => panic!("unexcpected fold line {:?}", fold),
         }
     }
 
@@ -75,8 +101,14 @@ impl FromStr for Instructions {
         if parts.next().is_some() {
             bail!("too many parts");
         }
-        let dots: HashSet<Coor> = raw_dots.lines().map(|s| s.parse()).collect::<Result<_>>()?;
-        let folds = raw_folds.lines().map(parse_fold).collect::<Result<_>>()?;
+        let dots: HashSet<Coor> = raw_dots
+            .lines()
+            .map(Coor::from_str)
+            .collect::<Result<_>>()?;
+        let folds: Vec<_> = raw_folds
+            .lines()
+            .map(Fold::from_str)
+            .collect::<Result<_>>()?;
         Ok(Instructions { dots, folds })
     }
 }

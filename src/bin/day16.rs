@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Context, Error, Result};
 use aoc2021::dispatch;
 
 fn main() -> Result<()> {
@@ -14,6 +14,22 @@ enum Op {
     GreaterThan,
     LessThan,
     EqualTo,
+}
+
+impl TryFrom<usize> for Op {
+    type Error = Error;
+    fn try_from(n: usize) -> Result<Op> {
+        Ok(match n {
+            0 => Op::Sum,
+            1 => Op::Product,
+            2 => Op::Min,
+            3 => Op::Max,
+            5 => Op::GreaterThan,
+            6 => Op::LessThan,
+            7 => Op::EqualTo,
+            _ => bail!("unknown op type {}", n),
+        })
+    }
 }
 
 #[derive(Debug)]
@@ -38,39 +54,31 @@ impl Packet {
     }
 
     fn value(&self) -> usize {
+        let bool_to_int = |b| if b { 1 } else { 0 };
         match &self.value {
             Value::Literal(val) => *val,
-            Value::Op(Op::Sum, packets) => packets.iter().map(|p| p.value()).sum(),
-            Value::Op(Op::Product, packets) => packets.iter().map(|p| p.value()).product(),
-            Value::Op(Op::Min, packets) => packets
-                .iter()
-                .map(|p| p.value())
-                .min()
-                .expect("no packets for min"),
-            Value::Op(Op::Max, packets) => packets
-                .iter()
-                .map(|p| p.value())
-                .max()
-                .expect("no packets for min"),
-            Value::Op(Op::GreaterThan, packets) => {
-                if packets[0].value() > packets[1].value() {
-                    1
-                } else {
-                    0
-                }
-            }
-            Value::Op(Op::LessThan, packets) => {
-                if packets[0].value() < packets[1].value() {
-                    1
-                } else {
-                    0
-                }
-            }
-            Value::Op(Op::EqualTo, packets) => {
-                if packets[0].value() == packets[1].value() {
-                    1
-                } else {
-                    0
+            Value::Op(op, packets) => {
+                let values = packets.iter().map(Packet::value);
+                match op {
+                    Op::Sum => values.sum(),
+                    Op::Product => values.product(),
+                    Op::Min => values.min().expect("no packets for min"),
+                    Op::Max => values.max().expect("no packets for max"),
+                    Op::GreaterThan => {
+                        let values: Vec<_> = values.collect();
+                        assert_eq!(values.len(), 2);
+                        bool_to_int(values[0] > values[1])
+                    }
+                    Op::LessThan => {
+                        let values: Vec<_> = values.collect();
+                        assert_eq!(values.len(), 2);
+                        bool_to_int(values[0] < values[1])
+                    }
+                    Op::EqualTo => {
+                        let values: Vec<_> = values.collect();
+                        assert_eq!(values.len(), 2);
+                        bool_to_int(values[0] == values[1])
+                    }
                 }
             }
         }
@@ -82,19 +90,19 @@ fn hex_to_bytes(c: char) -> Result<Vec<u8>> {
     if decimal >= 16 {
         bail!("too large");
     }
-    let mut res = vec![];
-    res.push(decimal >> 3 & 1);
-    res.push(decimal >> 2 & 1);
-    res.push(decimal >> 1 & 1);
-    res.push(decimal >> 0 & 1);
-    Ok(res)
+    Ok(vec![
+        decimal >> 3 & 1,
+        decimal >> 2 & 1,
+        decimal >> 1 & 1,
+        decimal & 1,
+    ])
 }
 
-fn bytes_to_dec(digits: &[u8]) -> usize {
-    digits.iter().fold(0, |acc, d| acc * 2 + *d as usize)
+fn bytes_to_dec<'a>(digits: impl IntoIterator<Item = &'a u8>) -> usize {
+    digits.into_iter().fold(0, |acc, d| acc * 2 + *d as usize)
 }
 
-fn parse(input: &str) -> Result<(Packet, usize)> {
+fn parse(input: &str) -> Result<Packet> {
     let digits: Vec<u8> = input
         .trim()
         .chars()
@@ -103,83 +111,82 @@ fn parse(input: &str) -> Result<(Packet, usize)> {
         .into_iter()
         .flatten()
         .collect();
-    process(&digits, 0)
+    process(&mut ByteStream::new(digits))
 }
 
-fn process(it: &[u8], depth: usize) -> Result<(Packet, usize)> {
-    let mut consumed = 0;
-    let version = bytes_to_dec(&it[consumed..consumed + 3]);
-    consumed += 3;
-    let type_id = bytes_to_dec(&it[consumed..consumed + 3]);
-    consumed += 3;
+struct ByteStream {
+    data: Vec<u8>,
+    pos: usize,
+}
+
+impl ByteStream {
+    fn new(data: Vec<u8>) -> Self {
+        Self { data, pos: 0 }
+    }
+
+    fn read(&mut self, n: usize) -> &[u8] {
+        let res = &self.data[self.pos..self.pos + n];
+        self.pos += n;
+        res
+    }
+
+    fn len(&self) -> usize {
+        self.data[self.pos..].len()
+    }
+}
+
+fn process(stream: &mut ByteStream) -> Result<Packet> {
+    let version = bytes_to_dec(stream.read(3));
+    let type_id = bytes_to_dec(stream.read(3));
     let value = match type_id {
         4 => {
             // literal
             let mut bin_parts = vec![];
             loop {
-                let chunk = &it[consumed..consumed + 5];
-                consumed += 5;
+                let chunk = stream.read(5);
                 bin_parts.push(chunk[1..].to_vec());
                 if chunk[0] == 0 {
-                    let value = bytes_to_dec(&bin_parts.into_iter().flatten().collect::<Vec<_>>());
+                    let value = bytes_to_dec(bin_parts.iter().flatten());
                     break Value::Literal(value);
                 }
             }
         }
         op => {
             // operator
-            let length_type_id = it[consumed];
-            consumed += 1;
+            let length_type_id = stream.read(1)[0];
             let packets = if length_type_id == 0 {
-                let sub_bits = bytes_to_dec(&it[consumed..consumed + 15]);
-                consumed += 15;
-                let mut seen_sub_bits = 0;
+                let sub_bits = bytes_to_dec(stream.read(15));
+                let start_len = stream.len();
                 let mut packets = vec![];
-                while seen_sub_bits < sub_bits {
-                    let (packet, bits) = process(&it[consumed..], depth + 1)?;
+                while start_len - stream.len() < sub_bits {
+                    let packet = process(stream)?;
                     packets.push(packet);
-                    seen_sub_bits += bits;
-                    consumed += bits;
                 }
                 packets
             } else if length_type_id == 1 {
-                let sub_packets = bytes_to_dec(&it[consumed..consumed + 11]) as usize;
-                consumed += 11;
+                let sub_packets = bytes_to_dec(stream.read(11));
                 let mut packets = vec![];
                 while packets.len() < sub_packets {
-                    let (packet, bits) = process(&it[consumed..], depth + 1)?;
-                    consumed += bits;
+                    let packet = process(stream)?;
                     packets.push(packet);
                 }
                 packets
             } else {
                 bail!("invalid length_type_id");
             };
-            Value::Op(
-                match op {
-                    0 => Op::Sum,
-                    1 => Op::Product,
-                    2 => Op::Min,
-                    3 => Op::Max,
-                    5 => Op::GreaterThan,
-                    6 => Op::LessThan,
-                    7 => Op::EqualTo,
-                    _ => bail!("unknown op type {}", op),
-                },
-                packets,
-            )
+            Value::Op(Op::try_from(op)?, packets)
         }
     };
-    Ok((Packet { version, value }, consumed))
+    Ok(Packet { version, value })
 }
 
 fn part1(input: &str) -> Result<usize> {
-    let (packet, _) = parse(input)?;
+    let packet = parse(input)?;
     Ok(packet.version_sum())
 }
 
 fn part2(input: &str) -> Result<usize> {
-    let (packet, _) = parse(input)?;
+    let packet = parse(input)?;
     Ok(packet.value())
 }
 

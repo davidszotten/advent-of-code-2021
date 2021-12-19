@@ -223,21 +223,43 @@ fn part1(input: &str) -> Result<usize> {
                     //     // offset1 + rot1._neg().apply(offset2),
                     //     // );
                     // }
-                    offsets.insert(entry, (offset1 + rot1.apply(offset2), rot2));
+                    offsets.insert(entry, (offset1 + rot1.apply(offset2), rot1.sub(rot2)));
+                    // offsets.insert(entry, (offset1 + rot1.apply(offset2), rot1));
                     found = true;
                     break 'foo;
                     // dbg!(entry, known, off, rot);
                     // todo!();
                 }
-                if let Some(&(offset2, rot2)) = relations.get(&(entry, *known)) {
-                    offsets.insert(entry, (offset1 + rot1.neg().apply(offset2), rot2.neg()));
+                if relations.get(&(entry, *known)).is_some() {
+                    let (offset2b, rot2b) = offset(&scanners[*known], &scanners[entry]).unwrap();
+                    // dbg!(offset1);
+                    // dbg!(offset2, offset2b);
+                    // offsets.insert(entry, (offset1 + rot1.neg().apply(offset2b), rot2b));
+                    offsets.insert(
+                        entry,
+                        // (offset1 + rot1.neg().apply(offset2b), rot1.neg().sub(rot2)),
+                        (offset1 + rot1.neg().apply(offset2b), rot1.sub(rot2b).neg()),
+                    );
+                    // dbg!(entry);
+                    // dbg!(offset1, offset2b, rot1, rot2b);
+                    // dbg!(offset1 - rot1.apply(offset2b));
+                    // dbg!(offset1 - rot1.neg().apply(offset2b));
+                    // dbg!(offset1 - rot2b.apply(offset2b));
+                    // dbg!(offset1 - rot2b.neg().apply(offset2b));
+                    // offsets.insert(entry, (offset1 + rot1.neg().apply(offset2), rot2));
                     found = true;
                     break 'foo;
                 }
             }
         }
     }
-    dbg!(&offsets);
+
+    // assert_eq!(offsets[&0].0, Coor3::new(0, 0, 0));
+    // assert_eq!(offsets[&1].0, Coor3::new(68, -1246, -43));
+    // assert_eq!(offsets[&2].0, Coor3::new(1105, -1205, 1229));
+    // assert_eq!(offsets[&3].0, Coor3::new(-92, -2380, -20));
+    // assert_eq!(offsets[&4].0, Coor3::new(-20, -1133, 1061));
+    // dbg!(&offsets);
 
     // let (offset, rotation) = offsets[&1];
     // dbg!(offset, rotation);
@@ -248,7 +270,7 @@ fn part1(input: &str) -> Result<usize> {
     let mut probes = HashSet::new();
     for (scanner_idx, (offset, rotation)) in offsets {
         for probe in &scanners[scanner_idx] {
-            probes.insert(offset + rotation.apply(*probe));
+            probes.insert(offset + rotation.neg().apply(*probe));
         }
     }
 

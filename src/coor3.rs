@@ -30,6 +30,13 @@ impl FromStr for Coor3 {
     }
 }
 
+impl From<(i64, i64, i64)> for Coor3 {
+    fn from(tup: (i64, i64, i64)) -> Self {
+        let (x, y, z) = tup;
+        Coor3 { x, y, z }
+    }
+}
+
 impl Add for Coor3 {
     type Output = Self;
 

@@ -15,27 +15,35 @@ struct Rotation {
 }
 
 impl Rotation {
-    fn identity() -> Rotation {
+    fn new(x: i64, y: i64, z: i64) -> Rotation {
         Rotation {
-            rot_x: 0,
-            rot_y: 0,
-            rot_z: 0,
+            rot_x: x,
+            rot_y: y,
+            rot_z: z,
         }
     }
+    fn identity() -> Rotation {
+        Rotation::new(0, 0, 0)
+    }
     fn all() -> Vec<Rotation> {
+        let mut seen = HashSet::new();
         let mut res = vec![];
         for rot_x in 0..4 {
             for rot_y in 0..4 {
                 for rot_z in 0..4 {
-                    res.push(Rotation {
-                        rot_x,
-                        rot_y,
-                        rot_z,
-                    });
+                    let rotation = Rotation::new(rot_x, rot_y, rot_z);
+                    if seen.contains(&rotation.identity_action()) {
+                        continue;
+                    }
+                    seen.insert(rotation.identity_action());
+                    res.push(rotation);
                 }
             }
         }
         res
+    }
+    fn eq(&self, other: Rotation) -> bool {
+        self.identity_action() == other.identity_action()
     }
 
     fn apply(&self, coor: Coor3) -> Coor3 {
@@ -86,6 +94,20 @@ impl Rotation {
             }
         }
         unreachable!();
+    }
+
+    fn sub(&self, other: Rotation) -> Rotation {
+        // not enough brain to figure out the math. brute force instead
+        for rotation in Rotation::all() {
+            if rotation.add(other).eq(*self) {
+                return rotation;
+            }
+        }
+        unreachable!();
+    }
+
+    fn neg(&self) -> Rotation {
+        Rotation::identity().sub(*self)
     }
 
     // fn _rotate(&self, coor: Coor3) -> Coor3 {
@@ -141,18 +163,20 @@ fn offset(scanner1: &[Coor3], scanner2: &[Coor3]) -> Option<(Coor3, Rotation)> {
         if intersection.len() >= 6 {
             // if true {
             let mut offsets = HashMap::new();
-            for &(i1, j1, c1) in &relative1 {
-                for &(i2, j2, c2) in &relative2 {
+            for &(i1, _j1, c1) in &relative1 {
+                for &(i2, _j2, c2) in &relative2 {
                     if c1 == c2 {
+                        // dbg!(scanner1[i1], scanner2[i2]);
                         let offset1 = scanner1[i1] - rotation.apply(scanner2[i2]);
-                        let offset2 = scanner1[j1] - rotation.apply(scanner2[j2]);
+                        // let offset2 = scanner1[j1] - rotation.apply(scanner2[j2]);
                         *offsets.entry(offset1).or_insert(0) += 1;
-                        *offsets.entry(offset2).or_insert(0) += 1;
+                        // *offsets.entry(offset2).or_insert(0) += 1;
                     }
                 }
             }
             let mut entries = offsets.iter().map(|(k, v)| (v, k)).collect::<Vec<_>>();
             entries.sort_unstable();
+            // dbg!(&entries);
             if entries.len() > 0 && *entries[0].0 >= 12 {
                 assert_eq!(entries.len(), 1);
                 return Some((*entries[0].1, rotation));
@@ -169,7 +193,6 @@ fn part1(input: &str) -> Result<usize> {
     let scanners = parse(input)?;
     for i in 0..scanners.len() {
         for j in i + 1..scanners.len() {
-            // dbg!(i, j, offset(&scanners[i], &scanners[j]));
             if let Some(res) = offset(&scanners[i], &scanners[j]) {
                 relations.insert((i, j), res);
             }
@@ -177,42 +200,144 @@ fn part1(input: &str) -> Result<usize> {
     }
     // let mut missing: HashSet<_> = (1..scanners.len()).collect();
     // for entry in missing.iter().cloned() {
-    dbg!(&relations);
+    // dbg!(&relations.keys());
     let mut found = true;
     while found {
         found = false;
-        for entry in 1..scanners.len() {
+        'foo: for entry in 1..scanners.len() {
             if offsets.contains_key(&entry) {
                 continue;
             }
+            // dbg!(entry);
+            // dbg!(offsets.keys());
             for (known, &(offset1, rot1)) in &offsets.clone() {
                 if let Some(&(offset2, rot2)) = relations.get(&(*known, entry)) {
-                    println!("{} {}", entry, known);
+                    // println!("{} {}", entry, known);
                     // missing.insert(entry);
-                    if entry == 4 {
-                        dbg!(offset1, offset2);
-                    }
-                    offsets.insert(entry, (offset1 + offset2, rot1.add(rot2)));
+                    // if entry == 1 || entry == 4 {
+                    //     // 4: -20,-1133,1061
+                    //     // 1: 68,-1246,-43
+                    //     // dbg!(
+                    //     // offset1 + offset2,
+                    //     // offset1 + rot1.apply(offset2),
+                    //     // offset1 + rot1._neg().apply(offset2),
+                    //     // );
+                    // }
+                    offsets.insert(entry, (offset1 + rot1.apply(offset2), rot2));
                     found = true;
-                    break;
+                    break 'foo;
                     // dbg!(entry, known, off, rot);
                     // todo!();
+                }
+                if let Some(&(offset2, rot2)) = relations.get(&(entry, *known)) {
+                    offsets.insert(entry, (offset1 + rot1.neg().apply(offset2), rot2.neg()));
+                    found = true;
+                    break 'foo;
                 }
             }
         }
     }
-    // dbg!(offsets);
-    // while offsets.len() < scanners.len() - 1 {
-    //     for i in 0..scanners.len() {
-    //         if offsets.contains(&i) {continue}
-    //         // i is unset. who can we connect it to
-    //         for (rel, offset) in relations {
-    //             if rel.0 == i
-    //         }
-    //     }
+    dbg!(&offsets);
 
-    // }
-    Ok(scanners.len())
+    // let (offset, rotation) = offsets[&1];
+    // dbg!(offset, rotation);
+    // let coor = Coor3::new(605, 423, 415);
+    // // -537,-823,-458
+    // dbg!(offset + rotation.apply(coor));
+
+    let mut probes = HashSet::new();
+    for (scanner_idx, (offset, rotation)) in offsets {
+        for probe in &scanners[scanner_idx] {
+            probes.insert(offset + rotation.apply(*probe));
+        }
+    }
+
+    let target = HashSet::from([
+        Coor3::new(-892, 524, 684),
+        Coor3::new(-876, 649, 763),
+        Coor3::new(-838, 591, 734),
+        Coor3::new(-789, 900, -551),
+        Coor3::new(-739, -1745, 668),
+        Coor3::new(-706, -3180, -659),
+        Coor3::new(-697, -3072, -689),
+        Coor3::new(-689, 845, -530),
+        Coor3::new(-687, -1600, 576),
+        Coor3::new(-661, -816, -575),
+        Coor3::new(-654, -3158, -753),
+        Coor3::new(-635, -1737, 486),
+        Coor3::new(-631, -672, 1502),
+        Coor3::new(-624, -1620, 1868),
+        Coor3::new(-620, -3212, 371),
+        Coor3::new(-618, -824, -621),
+        Coor3::new(-612, -1695, 1788),
+        Coor3::new(-601, -1648, -643),
+        Coor3::new(-584, 868, -557),
+        Coor3::new(-537, -823, -458),
+        Coor3::new(-532, -1715, 1894),
+        Coor3::new(-518, -1681, -600),
+        Coor3::new(-499, -1607, -770),
+        Coor3::new(-485, -357, 347),
+        Coor3::new(-470, -3283, 303),
+        Coor3::new(-456, -621, 1527),
+        Coor3::new(-447, -329, 318),
+        Coor3::new(-430, -3130, 366),
+        Coor3::new(-413, -627, 1469),
+        Coor3::new(-345, -311, 381),
+        Coor3::new(-36, -1284, 1171),
+        Coor3::new(-27, -1108, -65),
+        Coor3::new(7, -33, -71),
+        Coor3::new(12, -2351, -103),
+        Coor3::new(26, -1119, 1091),
+        Coor3::new(346, -2985, 342),
+        Coor3::new(366, -3059, 397),
+        Coor3::new(377, -2827, 367),
+        Coor3::new(390, -675, -793),
+        Coor3::new(396, -1931, -563),
+        Coor3::new(404, -588, -901),
+        Coor3::new(408, -1815, 803),
+        Coor3::new(423, -701, 434),
+        Coor3::new(432, -2009, 850),
+        Coor3::new(443, 580, 662),
+        Coor3::new(455, 729, 728),
+        Coor3::new(456, -540, 1869),
+        Coor3::new(459, -707, 401),
+        Coor3::new(465, -695, 1988),
+        Coor3::new(474, 580, 667),
+        Coor3::new(496, -1584, 1900),
+        Coor3::new(497, -1838, -617),
+        Coor3::new(527, -524, 1933),
+        Coor3::new(528, -643, 409),
+        Coor3::new(534, -1912, 768),
+        Coor3::new(544, -627, -890),
+        Coor3::new(553, 345, -567),
+        Coor3::new(564, 392, -477),
+        Coor3::new(568, -2007, -577),
+        Coor3::new(605, -1665, 1952),
+        Coor3::new(612, -1593, 1893),
+        Coor3::new(630, 319, -379),
+        Coor3::new(686, -3108, -505),
+        Coor3::new(776, -3184, -501),
+        Coor3::new(846, -3110, -434),
+        Coor3::new(1135, -1161, 1235),
+        Coor3::new(1243, -1093, 1063),
+        Coor3::new(1660, -552, 429),
+        Coor3::new(1693, -557, 386),
+        Coor3::new(1735, -437, 1738),
+        Coor3::new(1749, -1800, 1813),
+        Coor3::new(1772, -405, 1572),
+        Coor3::new(1776, -675, 371),
+        Coor3::new(1779, -442, 1789),
+        Coor3::new(1780, -1548, 337),
+        Coor3::new(1786, -1538, 337),
+        Coor3::new(1847, -1591, 415),
+        Coor3::new(1889, -1729, 1762),
+        Coor3::new(1994, -1805, 1792),
+    ]);
+
+    dbg!(probes.intersection(&target).count());
+    // dbg!(&probes);
+
+    Ok(probes.len())
 }
 
 fn part2(_input: &str) -> Result<usize> {
@@ -229,22 +354,27 @@ mod tests {
     fn test_offset() -> Result<()> {
         let scanners = parse(TEST_INPUT)?;
         assert_eq!(
-            dbg!(offset(&scanners[0], &scanners[1]).unwrap()).0,
+            offset(&scanners[0], &scanners[1]).unwrap().0,
             "68,-1246,-43".parse()?
         );
-        let cmp = offset(&scanners[1], &scanners[0]).unwrap();
-        dbg!(cmp.0.apply(cmp.1));
-        // dbg!(&scanners[2]);
-        // for i in [0, 1, 3, 4] {
-        // dbg!(&scanners[i].len(), &scanners[2].len());
-        // offset(&scanners[i], &scanners[2]);
-        // }
-        // assert!(false);
+        assert_ne!(
+            dbg!(offset(&scanners[0], &scanners[1]).unwrap().1),
+            Rotation::identity()
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_offset2() -> Result<()> {
+        let scanners = parse(TEST_INPUT)?;
+        offset(&scanners[1], &scanners[4]);
         Ok(())
     }
 
     #[test]
     fn test_rotation() {
+        // assert_eq!(Rotation::all().len(), 24);
         assert_eq!(
             dbg!(Rotation::all()
                 .iter()
@@ -253,6 +383,16 @@ mod tests {
             .len(),
             24
         );
+    }
+
+    #[test]
+    fn test_rotation_add() {
+        assert!((Rotation::new(1, 0, 0).add(Rotation::new(1, 0, 0))).eq(Rotation::new(2, 0, 0)));
+    }
+
+    #[test]
+    fn test_rotation_sub() {
+        assert!(dbg!(Rotation::new(1, 0, 0).sub(Rotation::new(1, 0, 0))).eq(Rotation::new(0, 0, 0)));
     }
 
     #[test]

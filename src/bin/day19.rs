@@ -268,8 +268,11 @@ fn part1(input: &str) -> Result<usize> {
     // dbg!(offset + rotation.apply(coor));
 
     let mut probes = HashSet::new();
-    for (scanner_idx, (offset, rotation)) in offsets {
-        for probe in &scanners[scanner_idx] {
+    // for (scanner_idx, (offset, rotation)) in offsets {
+    // for probe in &scanners[scanner_idx] {
+    for (idx, scanner) in scanners.iter().enumerate() {
+        let (offset, rotation) = offsets[&idx];
+        for probe in scanner {
             probes.insert(offset + rotation.neg().apply(*probe));
         }
     }
@@ -356,7 +359,8 @@ fn part1(input: &str) -> Result<usize> {
         Coor3::new(1994, -1805, 1792),
     ]);
 
-    dbg!(probes.intersection(&target).count());
+    // dbg!(probes.intersection(&target).count());
+    assert_eq!(probes, target);
     // dbg!(&probes);
 
     Ok(probes.len())

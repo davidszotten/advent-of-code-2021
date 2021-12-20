@@ -1,10 +1,15 @@
 use anyhow::{Context, Result};
 use aoc2021::coor3::Coor3;
 use aoc2021::dispatch;
+use lazy_static::lazy_static;
 use std::collections::{HashMap, HashSet};
 
 fn main() -> Result<()> {
     dispatch(part1, part2)
+}
+
+lazy_static! {
+    static ref ALL_ROTATIONS: Vec<Rotation> = Rotation::_all();
 }
 
 #[derive(Debug, PartialEq, Eq, Default, Clone, Copy, Hash)]
@@ -25,7 +30,10 @@ impl Rotation {
     fn identity() -> Rotation {
         Rotation::new(0, 0, 0)
     }
-    fn all() -> Vec<Rotation> {
+    fn all() -> &'static [Rotation] {
+        &ALL_ROTATIONS
+    }
+    fn _all() -> Vec<Rotation> {
         let mut seen = HashSet::new();
         let mut res = vec![];
         for rot_x in 0..4 {
@@ -90,7 +98,7 @@ impl Rotation {
         ];
         for rotation in Rotation::all() {
             if rotation.identity_action() == both {
-                return rotation;
+                return *rotation;
             }
         }
         unreachable!();
@@ -100,7 +108,7 @@ impl Rotation {
         // not enough brain to figure out the math. brute force instead
         for rotation in Rotation::all() {
             if rotation.add(other).eq(*self) {
-                return rotation;
+                return *rotation;
             }
         }
         unreachable!();
@@ -179,7 +187,7 @@ fn offset(scanner1: &[Coor3], scanner2: &[Coor3]) -> Option<(Coor3, Rotation)> {
             // dbg!(&entries);
             if entries.len() > 0 && *entries[0].0 >= 12 {
                 assert_eq!(entries.len(), 1);
-                return Some((*entries[0].1, rotation));
+                return Some((*entries[0].1, *rotation));
             }
         }
     }

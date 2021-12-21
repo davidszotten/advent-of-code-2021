@@ -50,9 +50,6 @@ impl Rotation {
         }
         res
     }
-    fn eq(&self, other: Rotation) -> bool {
-        self.identity_action() == other.identity_action()
-    }
 
     fn apply(&self, coor: Coor3) -> Coor3 {
         let mut coor = coor;
@@ -87,52 +84,6 @@ impl Rotation {
             self.apply((0, 0, 1).into()),
         ]
     }
-
-    fn add(&self, other: Rotation) -> Rotation {
-        // not enough brain to figure out the math. brute force instead
-        let one = self.identity_action();
-        let both = [
-            other.apply(one[0]),
-            other.apply(one[1]),
-            other.apply(one[2]),
-        ];
-        for rotation in Rotation::all() {
-            if rotation.identity_action() == both {
-                return *rotation;
-            }
-        }
-        unreachable!();
-    }
-
-    fn sub(&self, other: Rotation) -> Rotation {
-        // not enough brain to figure out the math. brute force instead
-        for rotation in Rotation::all() {
-            if rotation.add(other).eq(*self) {
-                return *rotation;
-            }
-        }
-        unreachable!();
-    }
-
-    fn neg(&self) -> Rotation {
-        Rotation::identity().sub(*self)
-    }
-
-    // fn _rotate(&self, coor: Coor3) -> Coor3 {
-    //     let mut coor = coor;
-    //     for _ in 0..self.rotation {
-    //         coor = Coor3::new(coor.y, coor.z, coor.x);
-    //     }
-    //     coor
-    // }
-
-    // fn _flip(&self, coor: Coor3) -> Coor3 {
-    //     Coor3::new(
-    //         self.flip_x * coor.x,
-    //         self.flip_y * coor.y,
-    //         self.flip_z * coor.z,
-    //     )
-    // }
 }
 
 fn parse(input: &str) -> Result<Vec<Vec<Coor3>>> {
@@ -165,26 +116,18 @@ fn offset(scanner1: &[Coor3], scanner2: &[Coor3]) -> Option<(Coor3, Rotation)> {
         let relative_set1 = relative1.iter().map(|(_, _, c)| c).collect::<HashSet<_>>();
         let relative_set2 = relative2.iter().map(|(_, _, c)| c).collect::<HashSet<_>>();
         let intersection: Vec<_> = relative_set1.intersection(&relative_set2).collect();
-        // dbg!(intersection.len());
-
-        // if intersection.len() >= 12 {
         if intersection.len() >= 6 {
-            // if true {
             let mut offsets = HashMap::new();
             for &(i1, _j1, c1) in &relative1 {
                 for &(i2, _j2, c2) in &relative2 {
                     if c1 == c2 {
-                        // dbg!(scanner1[i1], scanner2[i2]);
                         let offset1 = scanner1[i1] - rotation.apply(scanner2[i2]);
-                        // let offset2 = scanner1[j1] - rotation.apply(scanner2[j2]);
                         *offsets.entry(offset1).or_insert(0) += 1;
-                        // *offsets.entry(offset2).or_insert(0) += 1;
                     }
                 }
             }
             let mut entries = offsets.iter().map(|(k, v)| (v, k)).collect::<Vec<_>>();
             entries.sort_unstable();
-            // dbg!(&entries);
             if entries.len() > 0 && *entries[0].0 >= 12 {
                 assert_eq!(entries.len(), 1);
                 return Some((*entries[0].1, *rotation));
@@ -195,118 +138,74 @@ fn offset(scanner1: &[Coor3], scanner2: &[Coor3]) -> Option<(Coor3, Rotation)> {
 }
 
 fn part1(input: &str) -> Result<usize> {
-    let mut relations = HashMap::new();
     let mut offsets = HashMap::new();
-    offsets.insert(0, (Coor3::new(0, 0, 0), Rotation::identity()));
-    let scanners = parse(input)?;
-    for i in 0..scanners.len() {
-        for j in i + 1..scanners.len() {
-            if let Some(res) = offset(&scanners[i], &scanners[j]) {
-                relations.insert((i, j), res);
-                let o1 = offset(&scanners[i], &scanners[j]).unwrap();
-                let o2 = offset(&scanners[j], &scanners[i]).unwrap();
-                // dbg!(o1.1.add(o2.1));
-                // dbg!(o1.0 + o1.1.apply(o2.0));
-                assert_eq!(o1.1, o2.1.neg());
-                assert_eq!(o1.0, -o2.1.neg().apply(o2.0));
-
-                // println!();
-                // panic!();
-            }
-        }
-    }
-    // let mut missing: HashSet<_> = (1..scanners.len()).collect();
-    // for entry in missing.iter().cloned() {
-    // dbg!(&relations.keys());
+    offsets.insert(0, vec![(Coor3::new(0, 0, 0), Rotation::identity())]);
+    let mut scanners = parse(input)?;
+    let mut done = vec![0];
     let mut found = true;
     while found {
         found = false;
-        'foo: for entry in 1..scanners.len() {
-            if offsets.contains_key(&entry) {
-                continue;
-            }
-
-            let foo = offsets
-                .keys()
-                .filter(|k| relations.contains_key(&(**k, entry)))
-                .collect::<Vec<_>>();
-            if entry == 18 && foo.len() > 1 {
-                println!("{:?} {}", foo, entry);
-                dbg!(offsets.get(&18));
-                dbg!(offsets.get(&12));
-                dbg!(offset(&scanners[0], &scanners[18]));
-                dbg!(offset(&scanners[12], &scanners[18]));
-            }
-
-            for (known, &(offset1, rot1)) in &offsets.clone() {
-                if let Some(&(offset2, rot2)) = relations.get(&(*known, entry)) {
-                    offsets.insert(entry, (offset1 + rot1.apply(offset2), rot1.sub(rot2)));
-                    found = true;
-                    break 'foo;
+        for &i in &done.clone() {
+            for j in 0..scanners.len() {
+                if done.iter().find(|&&x| x == j).is_some() {
+                    continue;
                 }
-                if relations.get(&(entry, *known)).is_some() {
-                    let (offset2b, rot2b) = offset(&scanners[*known], &scanners[entry]).unwrap();
-                    offsets.insert(
-                        entry,
-                        (offset1 + rot1.neg().apply(offset2b), rot1.sub(rot2b).neg()),
-                    );
+                if let Some((offset, rotation)) = offset(&scanners[i], &scanners[j]) {
+                    scanners[j] = scanners[j]
+                        .iter()
+                        .map(|c| offset + rotation.apply(*c))
+                        .collect();
+                    done.push(j);
                     found = true;
-                    break 'foo;
                 }
             }
         }
     }
-
-    // assert_eq!(offsets[&0].0, Coor3::new(0, 0, 0));
-    // assert_eq!(offsets[&1].0, Coor3::new(68, -1246, -43));
-    // assert_eq!(offsets[&2].0, Coor3::new(1105, -1205, 1229));
-    // assert_eq!(offsets[&3].0, Coor3::new(-92, -2380, -20));
-    // assert_eq!(offsets[&4].0, Coor3::new(-20, -1133, 1061));
-    // dbg!(&offsets);
-
-    // let (offset, rotation) = offsets[&1];
-    // dbg!(offset, rotation);
-    // let coor = Coor3::new(605, 423, 415);
-    // // -537,-823,-458
-    // dbg!(offset + rotation.apply(coor));
-
-    // assert_eq!(
-    //     offsets[&4],
-    //     (Coor3::new(-105, 1139, -25), Rotation::new(0, 0, 3))
-    // );
-    // assert_eq!(
-    //     offsets[&15],
-    //     (Coor3::new(-52, -1077, 57), Rotation::new(1, 2, 3))
-    // );
-    // assert_eq!(
-    //     offsets[&12],
-    //     (Coor3::new(1124, 79, -1224), Rotation::new(0, 3, 2))
-    // );
-    // dbg!(&offsets[&12]);
-
+    assert_eq!(done.len(), scanners.len());
     let mut probes = HashSet::new();
-    for (idx, scanner) in scanners.iter().enumerate() {
-        let (offset, rotation) = offsets[&idx];
+    for scanner in scanners {
         for probe in scanner {
-            probes.insert(offset + rotation.neg().apply(*probe));
+            probes.insert(probe);
         }
     }
-    let mut probes2 = HashSet::new();
-    for (scanner_idx, (offset, rotation)) in offsets {
-        for probe in &scanners[scanner_idx] {
-            probes2.insert(offset + rotation.neg().apply(*probe));
-        }
-    }
-    assert_eq!(probes, probes2);
-
-    // dbg!(probes.intersection(&target).count());
-    // dbg!(&probes);
-
     Ok(probes.len())
 }
 
-fn part2(_input: &str) -> Result<usize> {
-    Ok(0)
+fn part2(input: &str) -> Result<i64> {
+    let mut offsets = HashMap::new();
+    offsets.insert(0, vec![(Coor3::new(0, 0, 0), Rotation::identity())]);
+    let mut scanners = parse(input)?;
+    let mut done = vec![0];
+    let mut found = true;
+    let mut scanner_pos = vec![];
+    while found {
+        found = false;
+        for &i in &done.clone() {
+            for j in 0..scanners.len() {
+                if done.iter().find(|&&x| x == j).is_some() {
+                    continue;
+                }
+                if let Some((offset, rotation)) = offset(&scanners[i], &scanners[j]) {
+                    scanner_pos.push(offset);
+                    scanners[j] = scanners[j]
+                        .iter()
+                        .map(|c| offset + rotation.apply(*c))
+                        .collect();
+                    done.push(j);
+                    found = true;
+                }
+            }
+        }
+    }
+    assert_eq!(done.len(), scanners.len());
+    let manhattan = |c: Coor3| c.x.abs() + c.y.abs() + c.z.abs();
+    let mut max = 0;
+    for &d1 in &scanner_pos {
+        for &d2 in &scanner_pos {
+            max = max.max(manhattan(d2 - d1));
+        }
+    }
+    Ok(max)
 }
 
 #[cfg(test)]
@@ -339,7 +238,6 @@ mod tests {
 
     #[test]
     fn test_rotation() {
-        // assert_eq!(Rotation::all().len(), 24);
         assert_eq!(
             dbg!(Rotation::all()
                 .iter()
@@ -351,18 +249,14 @@ mod tests {
     }
 
     #[test]
-    fn test_rotation_add() {
-        assert!((Rotation::new(1, 0, 0).add(Rotation::new(1, 0, 0))).eq(Rotation::new(2, 0, 0)));
-    }
-
-    #[test]
-    fn test_rotation_sub() {
-        assert!(dbg!(Rotation::new(1, 0, 0).sub(Rotation::new(1, 0, 0))).eq(Rotation::new(0, 0, 0)));
-    }
-
-    #[test]
     fn test_part1() -> Result<()> {
         assert_eq!(part1(TEST_INPUT)?, 79);
+        Ok(())
+    }
+
+    #[test]
+    fn test_part2() -> Result<()> {
+        assert_eq!(part2(TEST_INPUT)?, 3621);
         Ok(())
     }
 }

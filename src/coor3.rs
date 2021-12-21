@@ -1,6 +1,6 @@
 use anyhow::{Context, Error, Result};
 use std::fmt;
-use std::ops::{Add, AddAssign, Mul, Neg, Sub};
+use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 use std::str::FromStr;
 
 #[derive(PartialEq, Eq, Default, Clone, Copy, Hash)]
@@ -56,6 +56,12 @@ impl Sub for Coor3 {
 
     fn sub(self, other: Self) -> Self {
         self + other * -1
+    }
+}
+
+impl SubAssign for Coor3 {
+    fn sub_assign(&mut self, other: Self) {
+        *self = *self - other;
     }
 }
 

@@ -1,6 +1,6 @@
 use anyhow::{Context, Error, Result};
 use std::fmt;
-use std::ops::{Add, AddAssign, Mul, Sub};
+use std::ops::{Add, AddAssign, Mul, Neg, Sub};
 use std::str::FromStr;
 
 #[derive(PartialEq, Eq, Default, Clone, Copy, Hash)]
@@ -56,6 +56,14 @@ impl Sub for Coor3 {
 
     fn sub(self, other: Self) -> Self {
         self + other * -1
+    }
+}
+
+impl Neg for Coor3 {
+    type Output = Self;
+
+    fn neg(self) -> Self {
+        Coor3::new(-self.x, -self.y, -self.z)
     }
 }
 

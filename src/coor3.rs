@@ -3,6 +3,31 @@ use std::fmt;
 use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 use std::str::FromStr;
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+pub enum Axis {
+    X,
+    Y,
+    Z,
+}
+
+impl Axis {
+    pub fn prev(&self) -> Axis {
+        match self {
+            Axis::X => Axis::Z,
+            Axis::Y => Axis::X,
+            Axis::Z => Axis::Y,
+        }
+    }
+
+    pub fn coor(&self) -> Coor3 {
+        match self {
+            Axis::X => Coor3::new(1, 0, 0),
+            Axis::Y => Coor3::new(0, 1, 0),
+            Axis::Z => Coor3::new(0, 0, 1),
+        }
+    }
+}
+
 #[derive(PartialEq, Eq, Default, Clone, Copy, Hash)]
 pub struct Coor3 {
     pub x: i64,
@@ -13,6 +38,18 @@ pub struct Coor3 {
 impl Coor3 {
     pub const fn new(x: i64, y: i64, z: i64) -> Self {
         Coor3 { x, y, z }
+    }
+
+    pub fn axis(&self, axis: Axis) -> i64 {
+        match axis {
+            Axis::X => self.x,
+            Axis::Y => self.y,
+            Axis::Z => self.z,
+        }
+    }
+
+    pub fn manhattan(&self) -> i64 {
+        self.x + self.y + self.z
     }
 }
 impl fmt::Debug for Coor3 {
@@ -77,6 +114,13 @@ impl Mul<i64> for Coor3 {
     type Output = Self;
     fn mul(self, rhs: i64) -> Self::Output {
         Coor3::new(self.x * rhs, self.y * rhs, self.z * rhs)
+    }
+}
+
+impl Mul<Coor3> for i64 {
+    type Output = Coor3;
+    fn mul(self, rhs: Coor3) -> Self::Output {
+        rhs * self
     }
 }
 

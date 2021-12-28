@@ -27,7 +27,7 @@ fn parse(input: &str) -> Result<[u64; 2]> {
 }
 
 fn part1(input: &str) -> Result<u64> {
-    let mut it = (1..).into_iter();
+    let mut it = 1..;
     let mut scores = [0, 0];
     let mut positions = parse(input)?;
     let mut throws = 0;
@@ -88,8 +88,8 @@ fn part2(input: &str) -> Result<u64> {
         for (throw, throw_count) in DICE {
             for (state, count) in &positions {
                 let (position, scores) = state;
-                let mut new_position = position.clone();
-                let mut new_scores = scores.clone();
+                let mut new_position = *position;
+                let mut new_scores = *scores;
                 new_position[player] = (new_position[player] + throw) % 10;
                 new_scores[player] += if new_position[player] == 0 {
                     10

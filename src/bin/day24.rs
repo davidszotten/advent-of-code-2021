@@ -25,24 +25,21 @@ fn digits(mut num: i64) -> impl Iterator<Item = i64> {
 
 fn parse(s: &str) -> Vec<(i64, i64, i64)> {
     let lines = s.trim().lines();
-    let a: Vec<_> = lines
+    let a = lines
         .clone()
         .skip(4)
         .step_by(18)
-        .map(|l| l.split(' ').nth(2).unwrap().parse::<i64>().unwrap())
-        .collect();
-    let b: Vec<_> = lines
+        .map(|l| l.split(' ').nth(2).unwrap().parse::<i64>().unwrap());
+    let b = lines
         .clone()
         .skip(5)
         .step_by(18)
-        .map(|l| l.split(' ').nth(2).unwrap().parse::<i64>().unwrap())
-        .collect();
-    let c: Vec<_> = lines
+        .map(|l| l.split(' ').nth(2).unwrap().parse::<i64>().unwrap());
+    let c = lines
         .clone()
         .skip(15)
         .step_by(18)
-        .map(|l| l.split(' ').nth(2).unwrap().parse::<i64>().unwrap())
-        .collect();
+        .map(|l| l.split(' ').nth(2).unwrap().parse::<i64>().unwrap());
     a.into_iter()
         .zip(b)
         .zip(c)
@@ -55,12 +52,10 @@ fn generic(input: i64, zprev: i64, zdiv: i64, xadd: i64, yadd: i64) -> Option<i6
     let z = zprev / zdiv;
     if input == x {
         Some(z)
+    } else if zdiv > 1 {
+        None
     } else {
-        if zdiv > 1 {
-            None
-        } else {
-            Some(z * 26 + input + yadd)
-        }
+        Some(z * 26 + input + yadd)
     }
 }
 

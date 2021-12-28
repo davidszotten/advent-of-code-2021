@@ -112,11 +112,11 @@ fn offsets(coors: &[Coor3], rotation: &Rotation) -> Vec<(usize, usize, Coor3)> {
 fn offset(scanner1: &[Coor3], scanner2: &[Coor3]) -> Option<(Coor3, Rotation)> {
     let relative1 = offsets(scanner1, &Rotation::identity());
     for rotation in Rotation::all() {
-        let relative2 = offsets(scanner2, &rotation);
+        let relative2 = offsets(scanner2, rotation);
         let relative_set1 = relative1.iter().map(|(_, _, c)| c).collect::<HashSet<_>>();
         let relative_set2 = relative2.iter().map(|(_, _, c)| c).collect::<HashSet<_>>();
-        let intersection: Vec<_> = relative_set1.intersection(&relative_set2).collect();
-        if intersection.len() >= 6 {
+        let intersection = relative_set1.intersection(&relative_set2);
+        if intersection.count() >= 6 {
             let mut offsets = HashMap::new();
             for &(i1, _j1, c1) in &relative1 {
                 for &(i2, _j2, c2) in &relative2 {
@@ -128,7 +128,7 @@ fn offset(scanner1: &[Coor3], scanner2: &[Coor3]) -> Option<(Coor3, Rotation)> {
             }
             let mut entries = offsets.iter().map(|(k, v)| (v, k)).collect::<Vec<_>>();
             entries.sort_unstable();
-            if entries.len() > 0 && *entries[0].0 >= 12 {
+            if !entries.is_empty() && *entries[0].0 >= 12 {
                 assert_eq!(entries.len(), 1);
                 return Some((*entries[0].1, *rotation));
             }
@@ -147,7 +147,7 @@ fn part1(input: &str) -> Result<usize> {
         found = false;
         for &i in &done.clone() {
             for j in 0..scanners.len() {
-                if done.iter().find(|&&x| x == j).is_some() {
+                if done.iter().any(|&x| x == j) {
                     continue;
                 }
                 if let Some((offset, rotation)) = offset(&scanners[i], &scanners[j]) {
@@ -182,7 +182,7 @@ fn part2(input: &str) -> Result<i64> {
         found = false;
         for &i in &done.clone() {
             for j in 0..scanners.len() {
-                if done.iter().find(|&&x| x == j).is_some() {
+                if done.iter().any(|&x| x == j) {
                     continue;
                 }
                 if let Some((offset, rotation)) = offset(&scanners[i], &scanners[j]) {
